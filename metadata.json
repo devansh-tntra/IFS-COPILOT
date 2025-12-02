@@ -1,0 +1,5 @@
+{
+  "name": "IFS Cloud Copilot",
+  "description": "A personal AI agent for IFS Cloud development, digital transformation, and certification preparation using Gemini.",
+  "requestFramePermissions": []
+}

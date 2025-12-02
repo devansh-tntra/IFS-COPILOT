@@ -11,7 +11,8 @@ interface SidebarProps {
   systemPrompt: string;
   setSystemPrompt: (prompt: string) => void;
   knowledgeBase: KnowledgeItem[];
-  setKnowledgeBase: React.Dispatch<React.SetStateAction<KnowledgeItem[]>>;
+  onAddItems: (items: KnowledgeItem[]) => void;
+  onRemoveItem: (id: string) => void;
   isOpen: boolean;
   toggleSidebar: () => void;
 }
@@ -20,7 +21,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   systemPrompt,
   setSystemPrompt,
   knowledgeBase,
-  setKnowledgeBase,
+  onAddItems,
+  onRemoveItem,
   isOpen,
   toggleSidebar
 }) => {
@@ -101,7 +103,9 @@ const Sidebar: React.FC<SidebarProps> = ({
         }
       }
 
-      setKnowledgeBase((prev) => [...prev, ...newItems]);
+      if (newItems.length > 0) {
+        onAddItems(newItems);
+      }
     } catch (error) {
       console.error("Global upload error:", error);
     } finally {
@@ -244,7 +248,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         throw new Error("Site security check detected (Cloudflare/CAPTCHA).");
       }
 
-      setKnowledgeBase(prev => [...prev, {
+      onAddItems([{
         id: Date.now().toString(),
         title: finalTitle,
         content: finalContent,
@@ -268,12 +272,8 @@ const Sidebar: React.FC<SidebarProps> = ({
       content: newNote,
       type: 'text'
     };
-    setKnowledgeBase((prev) => [...prev, newItem]);
+    onAddItems([newItem]);
     setNewNote('');
-  };
-
-  const handleDeleteItem = (id: string) => {
-    setKnowledgeBase((prev) => prev.filter((item) => item.id !== id));
   };
 
   return (
@@ -320,7 +320,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-6">
             <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-3">
               <p className="text-xs text-indigo-200">
-                Upload files (PDF, TXT, MD, JSON) or add URLs to ground the agent.
+                Upload files (PDF, TXT, MD, JSON) or add URLs to ground the agent. Content is saved automatically.
               </p>
             </div>
 
@@ -410,7 +410,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {item.title}
                     </span>
                     <button
-                      onClick={() => handleDeleteItem(item.id)}
+                      onClick={() => onRemoveItem(item.id)}
                       className="text-slate-500 hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={14} />

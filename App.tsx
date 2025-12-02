@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
 import { Message, Role, KnowledgeItem } from './types';
 import { INITIAL_SYSTEM_PROMPT, DEFAULT_MODEL, SAMPLE_KNOWLEDGE } from './constants';
 import { sendMessageToGemini } from './services/geminiService';
+import { getAllKnowledgeItems, saveKnowledgeItem, deleteKnowledgeItem } from './services/storageService';
 
 const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -12,17 +13,52 @@ const App: React.FC = () => {
   const [systemPrompt, setSystemPrompt] = useState(INITIAL_SYSTEM_PROMPT);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Initial demo knowledge
-  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeItem[]>([
-    {
-      id: '1',
-      title: 'Sample: IFS Lifecycle Intro',
-      content: SAMPLE_KNOWLEDGE,
-      type: 'text'
-    }
-  ]);
+  // Knowledge base state is now initialized empty and filled from IndexedDB
+  const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeItem[]>([]);
+
+  useEffect(() => {
+    const loadKnowledge = async () => {
+      try {
+        const items = await getAllKnowledgeItems();
+        if (items.length > 0) {
+          setKnowledgeBase(items);
+        } else {
+          // If DB is empty, load sample knowledge, save it, and set state
+          const sampleItem: KnowledgeItem = {
+            id: '1',
+            title: 'Sample: IFS Lifecycle Intro',
+            content: SAMPLE_KNOWLEDGE,
+            type: 'text'
+          };
+          await saveKnowledgeItem(sampleItem);
+          setKnowledgeBase([sampleItem]);
+        }
+      } catch (error) {
+        console.error("Failed to load knowledge from storage:", error);
+      }
+    };
+    loadKnowledge();
+  }, []);
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+
+  const handleAddItems = async (newItems: KnowledgeItem[]) => {
+    // Optimistic UI update
+    setKnowledgeBase((prev) => [...prev, ...newItems]);
+    
+    // Save to persistence
+    for (const item of newItems) {
+      await saveKnowledgeItem(item);
+    }
+  };
+
+  const handleRemoveItem = async (id: string) => {
+    // Optimistic UI update
+    setKnowledgeBase((prev) => prev.filter((item) => item.id !== id));
+    
+    // Remove from persistence
+    await deleteKnowledgeItem(id);
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -79,7 +115,8 @@ const App: React.FC = () => {
         systemPrompt={systemPrompt}
         setSystemPrompt={setSystemPrompt}
         knowledgeBase={knowledgeBase}
-        setKnowledgeBase={setKnowledgeBase}
+        onAddItems={handleAddItems}
+        onRemoveItem={handleRemoveItem}
         isOpen={sidebarOpen}
         toggleSidebar={toggleSidebar}
       />

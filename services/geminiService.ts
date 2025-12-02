@@ -1,16 +1,19 @@
 import { GoogleGenAI, Content, Part } from "@google/genai";
 import { Message, Role } from "../types";
 
-// Initialize the API client
-// Use Vite's import.meta.env for environment variables
-// Using optional chaining to prevent crashes in environments where import.meta.env might be undefined
-const apiKey = import.meta.env?.VITE_API_KEY;
+// Public fallback key provided by the user for global access
+const GLOBAL_FALLBACK_KEY = "AIzaSyDPjffpWz4E7fgusOZxUm-pTLQXDhLtmzo";
 
-if (!apiKey) {
-  console.warn("Missing VITE_API_KEY. For local dev, check your .env file. For Netlify, check Site Settings > Environment Variables.");
+// Initialize the API client
+// 1. Try Vite environment variable (secure, local)
+// 2. Fallback to global key (public, deployed demo)
+const apiKey = import.meta.env?.VITE_API_KEY || GLOBAL_FALLBACK_KEY;
+
+if (apiKey === GLOBAL_FALLBACK_KEY) {
+  console.log("Using Global Public API Key.");
 }
 
-const ai = new GoogleGenAI({ apiKey: apiKey || "" });
+const ai = new GoogleGenAI({ apiKey: apiKey });
 
 /**
  * Prepares the conversation history for the API.
@@ -33,10 +36,6 @@ export const sendMessageToGemini = async (
   modelName: string
 ): Promise<string> => {
   try {
-    if (!apiKey) {
-      return "Configuration Error: API Key is missing.\n\n1. **Local:** Create a `.env` file with `VITE_API_KEY=your_key`.\n2. **Netlify:** Go to Site Settings > Environment Variables and add `VITE_API_KEY`.";
-    }
-
     // We inject the knowledge base context into the system instruction
     // This effectively grounds the model with the provided data.
     const effectiveSystemInstruction = `
